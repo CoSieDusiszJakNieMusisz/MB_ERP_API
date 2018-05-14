@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace MB_ERP_API
 {
-    public class Class1
+    public static class Const
     {
+        public static int Wersja = 20171;
+        public static string Baza = "MojeBambino";
     }
 }
