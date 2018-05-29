@@ -1,4 +1,6 @@
-﻿using MB_ERP_API.Interfaces;
+﻿//using MB_ERP_API.Handlowe;
+using MB_ERP_API.Dokumenty;
+using MB_ERP_API.Interfaces;
 using MB_ERP_API.Models;
 using System;
 using System.Collections.Generic;
@@ -10,35 +12,132 @@ namespace MB_ERP_API
 {
     public class Dekompletacja : IDekompletacja
     {
-        private Dokument _Dokument { get; set; }
-        public Dokument Dokument
+        private List<Towar> _ListaTowarowRW { get; set; }
+        public List<Towar> ListaTowarowRW
         {
-            get
-            {
-                return _Dokument;
-            }
+            get { return _ListaTowarowRW; }
             set
             {
-                _Dokument = value;
+                _ListaTowarowRW = value;
             }
         }
 
-        private List<Towar> _Towary { get; set; }
-        public List<Towar> Towary
+        private List<Towar> _ListaTowarowPW { get; set; }
+        public List<Towar> ListaTowarowPW
         {
-            get
-            {
-                return _Towary;
-            }
+            get { return _ListaTowarowPW; }
             set
             {
-                _Towary = value;
+                _ListaTowarowPW = value;
             }
         }
 
-        public void Dekompletuj()
+        private IDokument _RW { get; set; }
+        public IDokument RW
         {
-            throw new NotImplementedException();
+            get { return _RW; }
+            set
+            {
+                _RW = value;
+            }
+        }
+
+        private IDokument _PW { get; set; }
+        public IDokument PW
+        {
+            get { return _PW; }
+            set
+            {
+                _PW = value;
+            }
+        }
+
+        private decimal WartoscRW { get; set; }
+        private decimal WartoscPW { get; set; }
+        Info info = new Info();
+        
+
+        /// <summary>
+        /// W konstruktorze Dekompletacji dostarczamy wszystkie informację potrzebne do dekomompletacji (Dokumenty rw/pw, widok z zaimplementowanym interfejsem IInfo. Aby wykonać dekompletację wywołujemy metodę RozpocznijDekompletacje())
+        /// </summary>
+        /// <param name="view">Widok z którego uruchamiana jest dekompletacja.</param>
+        /// <param name="DokumentRW">Dokument RW typu DokumentHanldowy.</param>
+        /// <param name="DokumentPW">Dokument PW typu DokumentHanldowy.</param>
+        /// <param name="towaryRW">Lista towarów do dekompletacji</param>
+        /// <param name="towaryPW">Lista składników dekompletowanych towarow</param>
+        public Dekompletacja(IDokument DokumentRW, IDokument DokumentPW)
+        {
+            RW = DokumentRW;
+            PW = DokumentPW;
+            ListaTowarowRW = RW.ListaProduktow as List<Towar>;
+            ListaTowarowPW = PW.ListaProduktow as List<Towar>;
+        }
+
+        public int RozpocznijDekompletacje()
+        {
+            NowyDokument(RW);
+            
+            WartoscRW = RW.WartoscDokumentu;
+            if (SprawdzPoprawnoscDokumentu())
+            {
+                NowyDokument(PW);
+                return 0;
+            }
+            else
+            {
+                info.Sukces = false;
+                info.Komunikat = "Różnica wartości dokumentów RW / PW jest zbyt duża.Wszystkie dokumenty dekompletacji zostaną cofnięte.";
+                info.Rodzic = true;
+
+                RW.NotifyObservers(info);
+                AnulujDekompletacje();                               
+                return 1;
+            }
+        }
+
+        private void AnulujDekompletacje()
+        {
+            if (PW.StanDokumentu != -1 && PW.DokumentNumer!=0)
+            {
+                PW.AnulujDokument();
+                RW.AnulujDokument();
+            }
+            else if(RW.StanDokumentu != -1 && RW.DokumentNumer!=0)
+            {
+                RW.AnulujDokument();
+            }             
+        }
+
+        private void NowyDokument(IDokument dokument)
+        {
+            info.DoUkonczenia = dokument.ListaProduktow.Count();
+            dokument.NotifyObservers(info);
+            dokument.NowyDokument();
+            dokument.DodajPozycjeDoDokumentu();
+            if(dokument.StanDokumentu!=-1)
+            {
+                dokument.ZamknijDokument(0);
+            }
+            info.DoUkonczenia = 0;
+            dokument.NotifyObservers(info);
+        }
+
+        private bool SprawdzPoprawnoscDokumentu()
+        {
+            var wyniki = RW.GetReturns();
+            var wartoscPW = ListaTowarowPW.Sum(k => k.Cena * k.Ilosc);
+            if (SprawdzMarginesBleduRWPW(WartoscRW, wartoscPW) <= 0.20m && wyniki.Sum() == 0)
+                return true;
+            else                
+                return false;
+        }
+
+        private decimal SprawdzMarginesBleduRWPW(decimal wartoscRW, decimal wartoscPW)
+        {
+            decimal roznica = wartoscRW - wartoscPW;
+            if (roznica < 0)
+                roznica *= -1;
+            return roznica;
         }
     }
 }

@@ -1,20 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using cdn_api;
 
 namespace MB_ERP_API
 {
-    public struct Results
+    public class Login 
     {
-        public int Sesja;
-        public int Wynik;
-    }
+        public int Wynik { get; set; }
+        public int _Sesja;
+        public int Sesja
+        {
+            get { return _Sesja; }
+        }
 
-    public static class Login
-    {
+        private int UtworzSesje { get; set; }
+        private string ProgramID { get; set; }
+        
+        [DllImport("ClaRUN.dll")]
+        public static extern void AttachThreadToClarion(int flag);
         /// <summary>
         /// Metoda do logowania użytkownika
         /// </summary>
@@ -24,27 +32,30 @@ namespace MB_ERP_API
         /// ( 1 - program tworzy własną sesję ) 
         /// Jeżeli 1, zostanie wywołane okno do logowania.</param>
         /// <returns>Metoda zwraca wynik w postaci int oraz numer sesji uzytkownika.</returns>      
-        public static Results Logowanie(string ProgramId, int UtworzWlasnaSesje = 0)
+        public Login(string ProgramId, int UtworzWlasnaSesje = 0)
         {
-            Results results = new Results();
+            UtworzSesje = UtworzWlasnaSesje;
+            ProgramID = ProgramId;
+        }
+
+        public void Loguj()
+        {
             XLLoginInfo_20171 login = new XLLoginInfo_20171()
             {
                 Wersja = Const.Wersja,
-                ProgramID = ProgramId,
+                ProgramID = ProgramID,
                 Baza = Const.Baza,
-                UtworzWlasnaSesje = UtworzWlasnaSesje
+                UtworzWlasnaSesje = UtworzSesje
             };
 
             try
             {
-                results.Wynik = cdn_api.cdn_api.XLLogin(login, ref results.Sesja);
+                Wynik = cdn_api.cdn_api.XLLogin(login, ref _Sesja);
             }
             catch (Exception ex)
             {
 
             }
-
-            return results;
         }
 
         /// <summary>
@@ -52,7 +63,7 @@ namespace MB_ERP_API
         /// </summary>
         /// <param name="Sesja">Sesja uzytkownika.</param>
         /// <returns></returns>
-        public static int Wylogowanie(int Sesja)
+        public int Wylogowanie(int Sesja)
         {
             int wynik;
             XLLogoutInfo_20171 logout = new XLLogoutInfo_20171() { Wersja = Const.Wersja };

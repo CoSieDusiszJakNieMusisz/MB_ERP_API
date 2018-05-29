@@ -9,9 +9,11 @@ namespace MB_ERP_API.Interfaces
 {
     public interface IDekompletacja
     {
-        Dokument Dokument { get; set; }
-        List<Towar> Towary { get; set; }
+        List<Towar> ListaTowarowRW { get; set; }
+        List<Towar> ListaTowarowPW { get; set; }
+        IDokument RW { get; set; }
+        IDokument PW { get; set; }
 
-        void Dekompletuj();
+        int RozpocznijDekompletacje();
     }
 }
