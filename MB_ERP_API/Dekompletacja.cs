@@ -55,6 +55,7 @@ namespace MB_ERP_API
         private decimal WartoscRW { get; set; }
         private decimal WartoscPW { get; set; }
         Info info = new Info();
+        IList<int> ZwracaneWyniki;
         
 
         /// <summary>
@@ -76,12 +77,16 @@ namespace MB_ERP_API
         public int RozpocznijDekompletacje()
         {
             NowyDokument(RW);
-            
             WartoscRW = RW.WartoscDokumentu;
+            ZwracaneWyniki = RW.GetReturns();
+            List<int> _ZwracaneWyniki = new List<int>();
+            _ZwracaneWyniki.AddRange(ZwracaneWyniki);
+
             if (SprawdzPoprawnoscDokumentu())
             {
                 NowyDokument(PW);
-                return 0;
+                _ZwracaneWyniki.AddRange(PW.GetReturns());
+                return _ZwracaneWyniki.Sum();
             }
             else
             {
@@ -90,8 +95,9 @@ namespace MB_ERP_API
                 info.Rodzic = true;
 
                 RW.NotifyObservers(info);
-                AnulujDekompletacje();                               
-                return 1;
+                AnulujDekompletacje();
+                _ZwracaneWyniki.AddRange(ZwracaneWyniki);
+                return _ZwracaneWyniki.Sum();
             }
         }
 
@@ -100,9 +106,10 @@ namespace MB_ERP_API
             if (PW.StanDokumentu != -1 && PW.DokumentNumer!=0)
             {
                 PW.AnulujDokument();
+                ZwracaneWyniki = PW.GetReturns();
                 RW.AnulujDokument();
             }
-            else if(RW.StanDokumentu != -1 && RW.DokumentNumer!=0)
+            else if(RW.StanDokumentu == -1 && RW.DokumentNumer!=0)
             {
                 RW.AnulujDokument();
             }             
@@ -124,9 +131,9 @@ namespace MB_ERP_API
 
         private bool SprawdzPoprawnoscDokumentu()
         {
-            var wyniki = RW.GetReturns();
+            ZwracaneWyniki = RW.GetReturns();
             var wartoscPW = ListaTowarowPW.Sum(k => k.Cena * k.Ilosc);
-            if (SprawdzMarginesBleduRWPW(WartoscRW, wartoscPW) <= 0.20m && wyniki.Sum() == 0)
+            if (SprawdzMarginesBleduRWPW(WartoscRW, wartoscPW) <= 0.20m && ZwracaneWyniki.Sum() == 0)
                 return true;
             else                
                 return false;

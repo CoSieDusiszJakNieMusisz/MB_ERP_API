@@ -12,12 +12,11 @@ namespace MB_ERP_API
     public class Login 
     {
         public int Wynik { get; set; }
-        public int _Sesja;
+        private int _Sesja = 0;
         public int Sesja
         {
             get { return _Sesja; }
         }
-
         private int UtworzSesje { get; set; }
         private string ProgramID { get; set; }
         
@@ -38,7 +37,7 @@ namespace MB_ERP_API
             ProgramID = ProgramId;
         }
 
-        public void Loguj()
+        public int Loguj()
         {
             XLLoginInfo_20171 login = new XLLoginInfo_20171()
             {
@@ -47,14 +46,14 @@ namespace MB_ERP_API
                 Baza = Const.Baza,
                 UtworzWlasnaSesje = UtworzSesje
             };
-
             try
             {
                 Wynik = cdn_api.cdn_api.XLLogin(login, ref _Sesja);
+                return Sesja;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-
+                return Sesja;
             }
         }
 
